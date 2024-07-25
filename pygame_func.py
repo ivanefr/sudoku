@@ -24,6 +24,7 @@ def update():
     pg.display.update()
     check_exit()
 
+
 def wait_press_buttons(button_arr):
     for event in pg.event.get():
         if event.type == pg.MOUSEBUTTONDOWN:
@@ -32,6 +33,7 @@ def wait_press_buttons(button_arr):
                 if button.is_clicked(x, y):
                     return button
     return None
+
 
 def get_font(name, size, italic=False, bold=False):
     return pg.font.SysFont(name, size, italic, bold)
