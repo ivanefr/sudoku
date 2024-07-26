@@ -7,15 +7,20 @@ import copy
 
 
 class Field:
-    def __init__(self, level, n=3):
+    def __init__(self, screen, level, n=3):
         self.n = n
         self.table = [[((i * n + i // n + j) % (n * n) + 1) for j in range(n * n)] for i in range(n * n)]
         self.task = [[((i * n + i // n + j) % (n * n) + 1) for j in range(n * n)] for i in range(n * n)]
         self.level = level
         self.diff = self.get_difficult()
+        self.screen = screen
+        self.clicked = None
+        self.good_cells = []
+        self.bad_cells = []
+        self.count_digits = [0] + [9] * 9
 
     def transposing(self):
-        self.table = list(map(list, zip(*self.table)))
+        self.table = list(map(lambda x: list(x), zip(*self.table)))
 
     def get_difficult(self):
         if self.level == EASY:
@@ -40,7 +45,7 @@ class Field:
 
         self.table[n1], self.table[n2] = self.table[n2], self.table[n1]
 
-    def swap_colums_small(self):
+    def swap_columns_small(self):
         self.transposing()
         self.swap_rows_small()
         self.transposing()
@@ -56,7 +61,7 @@ class Field:
             n1, n2 = area1 * self.n + i, area2 * self.n + i
             self.table[n1], self.table[n2] = self.table[n2], self.table[n1]
 
-    def swap_colums_area(self):
+    def swap_columns_area(self):
         self.transposing()
         self.swap_rows_area()
         self.transposing()
@@ -64,9 +69,9 @@ class Field:
     def shuffle(self, amt=10):
         mix_func = [self.transposing,
                     self.swap_rows_small,
-                    self.swap_colums_small,
+                    self.swap_columns_small,
                     self.swap_rows_area,
-                    self.swap_colums_area]
+                    self.swap_columns_area]
         for i in range(1, amt):
             random.choice(mix_func)()
         self.task = copy.deepcopy(self.table)
@@ -74,7 +79,7 @@ class Field:
     def generate(self):
         self.shuffle(15)
 
-        used = [[False for j in range(self.n * self.n)] for i in range(self.n * self.n)]
+        used = [[False for _ in range(self.n * self.n)] for _ in range(self.n * self.n)]
         c = 0
         difficult = self.n ** 4
         while c < self.n ** 4 and difficult > self.diff:
@@ -86,6 +91,7 @@ class Field:
             used[i][j] = True
 
             self.task[i][j] = 0
+            self.count_digits[self.table[i][j]] -= 1
             difficult -= 1
 
             temp = []
@@ -99,28 +105,115 @@ class Field:
             if ii != 1:
                 self.task[i][j] = self.table[i][j]
                 difficult += 1
+                self.count_digits[self.table[i][j]] += 1
 
-    def draw(self, screen: pg.Surface):
-        pg.draw.rect(screen, FIELD_COLOR,
-                     (WIDTH / 6, 100, FIELD_WIDTH, FIELD_HEIGHT), 1)
-        for i in range(self.n ** 2):
+    def draw(self):
+        pg.draw.rect(self.screen, FIELD_BG_COLOR,
+                     (LEFT_MARGIN, TOP_MARGIN, FIELD_WIDTH, FIELD_HEIGHT))
+        pg.draw.rect(self.screen, FIELD_BORDER_COLOR,
+                     (LEFT_MARGIN, TOP_MARGIN, FIELD_WIDTH, FIELD_HEIGHT), 1)
+        for i in range(self.n ** 2 + 1):
             w = 1
-            if i == 3 or i == 6:
-                w = 4
-            pg.draw.line(screen, FIELD_COLOR,
-                         (WIDTH / 6, 100 + i * CEIL_SIZE),
-                         (WIDTH / 6 * 5, 100 + i * CEIL_SIZE), w)
-            pg.draw.line(screen, FIELD_COLOR,
-                         (WIDTH / 6 + i * CEIL_SIZE, 100),
-                         (WIDTH / 6 + i * CEIL_SIZE, 100 + FIELD_HEIGHT), w)
+            if i in (0, 3, 6, 9):
+                w = 3
+            pg.draw.line(self.screen, FIELD_BORDER_COLOR,
+                         (LEFT_MARGIN, TOP_MARGIN + i * CEIL_SIZE),
+                         (LEFT_MARGIN + FIELD_WIDTH, TOP_MARGIN + i * CEIL_SIZE), w)
+            pg.draw.line(self.screen, FIELD_BORDER_COLOR,
+                         (LEFT_MARGIN + i * CEIL_SIZE, TOP_MARGIN),
+                         (LEFT_MARGIN + i * CEIL_SIZE, TOP_MARGIN + FIELD_HEIGHT), w)
         for i in range(self.n ** 2):
             for j in range(self.n ** 2):
-                self.draw_ceil(screen, i, j)
+                self.draw_ceil(i, j)
+        self.clicked = None
 
-    def draw_ceil(self, screen, i, j):
-        if not self.task[i][j]:
+    def draw_ceil(self, i, j):
+        if not self.task[i][j] and (i, j) not in self.bad_cells and (i, j) not in self.good_cells:
             return
-        text, rect = pg_help.get_text_rect("timesnewroman", str(self.task[i][j]), 50, WHITE)
-        rect.centerx = WIDTH / 6 + (j + 0.5) * CEIL_SIZE
-        rect.centery = 100 + (i + 0.5) * CEIL_SIZE
-        screen.blit(text, rect)
+        if (i, j) in self.good_cells:
+            return self.draw_good_ceil(i, j)
+        if (i, j) in self.bad_cells:
+            return self.draw_bad_ceil(i, j)
+        self.draw_default_ceil(i, j, WHITE)
+
+    def draw_good_ceil(self, i, j):
+        self.draw_default_ceil(i, j, GOOD_FONT_COLOR)
+
+    def draw_default_ceil(self, i, j, color):
+        text, rect = pg_help.get_text_rect("timesnewroman", str(self.task[i][j]), int(CEIL_SIZE), color)
+        rect.centerx = LEFT_MARGIN + (j + 0.5) * CEIL_SIZE
+        rect.centery = TOP_MARGIN + (i + 0.5) * CEIL_SIZE
+        self.screen.blit(text, rect)
+
+    def draw_bad_ceil(self, i, j):
+        self.draw_default_ceil(i, j, BAD_FONT_COLOR)
+
+    def draw_click_ceil(self, i, j):
+        pg.draw.rect(self.screen, CLICKED_CEIL_COLOR,
+                     (LEFT_MARGIN + i * CEIL_SIZE + 1, TOP_MARGIN + j * CEIL_SIZE + 1,
+                      CEIL_SIZE - 1, CEIL_SIZE - 1))
+        self.draw_ceil(j, i)
+
+    def draw_check_ceil(self, i, j):
+        pg.draw.rect(self.screen, CHECK_CEIL_COLOR,
+                     (LEFT_MARGIN + i * CEIL_SIZE + 1, TOP_MARGIN + j * CEIL_SIZE + 1,
+                      CEIL_SIZE - 1, CEIL_SIZE - 1))
+        self.draw_ceil(j, i)
+
+    def draw_click_row(self, row):
+        for i in range(self.n ** 2):
+            self.draw_check_ceil(row, i)
+
+    def draw_click_column(self, column):
+        for i in range(self.n ** 2):
+            self.draw_check_ceil(i, column)
+
+    def draw_click_cube(self, i, j):
+        for i in range(i // 3 * 3, i // 3 * 3 + 3):
+            for j in range(j // 3 * 3, j // 3 * 3 + 3):
+                self.draw_check_ceil(i, j)
+
+    def click(self, x, y):
+        self.draw()
+        self.draw_click_row(x)
+        self.draw_click_column(y)
+        self.draw_click_cube(x, y)
+        self.draw_click_ceil(x, y)
+        if self.task[y][x]:
+            for i in range(self.n ** 2):
+                for j in range(self.n ** 2):
+                    if self.task[j][i] == self.task[y][x]:
+                        self.draw_click_ceil(i, j)
+        self.clicked = (x, y)
+
+    def input_number(self, num):
+        if self.clicked is not None:
+            y, x = self.clicked
+            if (x, y) in self.bad_cells and self.task[x][y] == num:
+                self.task[x][y] = 0
+                self.bad_cells.remove((x, y))
+                self.draw_check_ceil(y, x)
+            else:
+                if ((x, y) in self.good_cells or
+                        self.task[x][y] and (x, y) not in self.bad_cells and (x, y) not in self.good_cells):
+                    return
+                self.task[x][y] = num
+                self.draw_check_ceil(y, x)
+                if self.table[x][y] == num:
+                    self.count_digits[self.task[x][y]] += 1
+                    self.good_cells.append((x, y))
+                    self.draw_good_ceil(x, y)
+                else:
+                    self.bad_cells.append((x, y))
+                    self.draw_bad_ceil(x, y)
+            self.click(y, x)
+
+    def get_count(self, n):
+        return self.count_digits[n]
+
+    def check_num(self, num):
+        for i in range(self.n ** 2):
+            for j in range(self.n ** 2):
+                if self.task[i][j] == num:
+                    self.click(j, i)
+                    return
