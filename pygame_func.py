@@ -60,3 +60,14 @@ def get_text_rect(name, text, size, color):
     f = get_font(name, size)
     t = f.render(text, True, color)
     return t, t.get_rect()
+
+
+def get_level_text(level):
+    if level == EASY:
+        return "Лёгкий"
+    if level == NORMAL:
+        return "Нормальный"
+    if level == HARD:
+        return "Сложный"
+    if level == EXTREME:
+        return "Экстремальный"

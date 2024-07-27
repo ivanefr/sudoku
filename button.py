@@ -1,5 +1,4 @@
 import pygame
-import pygame_func as pg_help
 
 
 class Button:
@@ -30,6 +29,9 @@ class Button:
 
     def __str__(self):
         return self.text
+
+    def fill(self, screen: pygame.Surface, bg_color):
+        screen.fill(bg_color, (self.x, self.y, self.width, self.height), )
 
 
 class MiniButton(Button):

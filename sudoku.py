@@ -10,9 +10,10 @@ class Sudoku:
         pg.init()
         pg.display.set_caption("Sudoku")
         self.screen = pg.display.set_mode(SIZE)
-        self.state = None
+        self.state = EASY
 
     def start(self):
+        self.draw_end_window()
         self.draw_start_window()
         self.run()
 
@@ -22,11 +23,14 @@ class Sudoku:
     def run(self):
         self.reset_bg()
         self.draw_title()
+        self.draw_level(self.state)
         field = Field(self.screen, self.state)
         field.generate()
+        for i in field.table:
+            print(i)
         field.draw()
 
-        buttons = []
+        buttons = {}
         x = LEFT_MARGIN + MARGIN_MINI_BTN_SIZE
         y = TOP_MARGIN + FIELD_HEIGHT + 10
         font1 = pg_help.get_font("timesnewroman", 40)
@@ -35,25 +39,79 @@ class Sudoku:
         for n in range(1, 10):
             btn = MiniButton(x + (n - 1) * CEIL_SIZE, y, MINI_BTN_WIDTH, MINI_BTN_HEIGHT, str(n),
                              str(field.get_count(n)), FIELD_BG_COLOR, GOOD_FONT_COLOR, WHITE, font1, font2, n)
-            buttons.append(btn)
-        for btn in buttons:
+            buttons.update({n: btn})
+        for btn in buttons.values():
             btn.draw(self.screen)
 
         while True:
             pg_help.update()
-            typ, *args = pg_help.wait_press_sudoku(buttons)
+            typ, *args = pg_help.wait_press_sudoku(buttons.values())
             if typ == FIELD:
                 field.click(*args)
             elif typ == EMPTY:
                 field.draw()
             elif typ == NUM:
                 number = args[0]
+                if number not in buttons:
+                    continue
                 field.input_number(number)
-                buttons[number - 1].change_text2(str(field.get_count(number)))
-                buttons[number - 1].draw(self.screen)
+                c = field.get_count(number)
+                if not c:
+                    if number in buttons:
+                        buttons[number].fill(self.screen, BG_COLOR)
+                        del buttons[number]
+                else:
+                    buttons[number].change_text2(str(c))
+                    buttons[number].draw(self.screen)
             elif typ == BTN:
                 n = args[0]
                 field.check_num(n)
+            if field.is_over():
+                break
+        self.draw_end_window()
+
+    def draw_end_window(self):
+        self.reset_bg()
+        self.draw_title()
+
+        lvl = pg_help.get_level_text(self.state)
+        text = f"Вы прошли {lvl} уровень сложности!!!"
+        text, rect = pg_help.get_text_rect("timesnewroman", text, 40, FONT_COLOR)
+        rect.centerx = WIDTH / 2
+        rect.y = 200
+        self.screen.blit(text, rect)
+
+        text, rect = pg_help.get_text_rect("timesnewroman", f"Ваше время: {self.get_timer()}",
+                                           35, FONT_COLOR)
+        rect.centerx = WIDTH / 2
+        rect.y = 300
+        self.screen.blit(text, rect)
+        while True:
+            pg_help.update()
+
+    def get_timer(self):
+        t = 0.0
+        t = f"{t:.2f}"
+        if len(t) == 4:
+            t = '0' + t
+        return t
+
+    def draw_level(self, level):
+        color = None
+        name = pg_help.get_level_text(level)
+        if level == EASY:
+            color = GREEN
+        elif level == NORMAL:
+            color = YELLOW
+        elif level == HARD:
+            color = RED
+        elif level == EXTREME:
+            color = PURPLE
+        text, rect = pg_help.get_text_rect("timesnewroman", name, 20, color)
+        rect.x = LEFT_MARGIN
+        rect.y = TOP_MARGIN - 25
+
+        self.screen.blit(text, rect)
 
     def draw_play_window(self):
         self.reset_bg()

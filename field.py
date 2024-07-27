@@ -15,8 +15,8 @@ class Field:
         self.diff = self.get_difficult()
         self.screen = screen
         self.clicked = None
-        self.good_cells = []
-        self.bad_cells = []
+        self.good_cells = set()
+        self.bad_cells = set()
         self.count_digits = [0] + [9] * 9
 
     def transposing(self):
@@ -77,7 +77,7 @@ class Field:
         self.task = copy.deepcopy(self.table)
 
     def generate(self):
-        self.shuffle(15)
+        self.shuffle(30)
 
         used = [[False for _ in range(self.n * self.n)] for _ in range(self.n * self.n)]
         c = 0
@@ -133,6 +133,11 @@ class Field:
         if (i, j) in self.good_cells:
             return self.draw_good_ceil(i, j)
         if (i, j) in self.bad_cells:
+            # print(self.bad_cells)
+            # print(self.good_cells)
+            # print(i, j, self.task[i][j])
+            # print(self.clicked)
+            # print('-----------------')
             return self.draw_bad_ceil(i, j)
         self.draw_default_ceil(i, j, WHITE)
 
@@ -201,15 +206,18 @@ class Field:
                 self.draw_check_ceil(y, x)
                 if self.table[x][y] == num:
                     self.count_digits[self.task[x][y]] += 1
-                    self.good_cells.append((x, y))
+                    self.good_cells.add((x, y))
+                    if (x, y) in self.bad_cells:
+                        self.bad_cells.remove((x, y))
                     self.draw_good_ceil(x, y)
                 else:
-                    self.bad_cells.append((x, y))
+                    self.bad_cells.add((x, y))
                     self.draw_bad_ceil(x, y)
             self.click(y, x)
+            self.clicked = (y, x)
 
     def get_count(self, n):
-        return self.count_digits[n]
+        return 9 - self.count_digits[n]
 
     def check_num(self, num):
         for i in range(self.n ** 2):
@@ -217,3 +225,9 @@ class Field:
                 if self.task[i][j] == num:
                     self.click(j, i)
                     return
+
+    def is_over(self):
+        s = 0
+        for i in range(1, 10):
+            s += self.get_count(i)
+        return s == 0
