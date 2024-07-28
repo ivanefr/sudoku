@@ -18,13 +18,14 @@ class Field:
         self.good_cells = set()
         self.bad_cells = set()
         self.count_digits = [0] + [9] * 9
+        self.bad = 0
 
     def transposing(self):
         self.table = list(map(lambda x: list(x), zip(*self.table)))
 
     def get_difficult(self):
         if self.level == EASY:
-            return 40
+            return 80
         if self.level == NORMAL:
             return 35
         if self.level == HARD:
@@ -125,7 +126,6 @@ class Field:
         for i in range(self.n ** 2):
             for j in range(self.n ** 2):
                 self.draw_ceil(i, j)
-        self.clicked = None
 
     def draw_ceil(self, i, j):
         if not self.task[i][j] and (i, j) not in self.bad_cells and (i, j) not in self.good_cells:
@@ -211,6 +211,7 @@ class Field:
                         self.bad_cells.remove((x, y))
                     self.draw_good_ceil(x, y)
                 else:
+                    self.bad += 1
                     self.bad_cells.add((x, y))
                     self.draw_bad_ceil(x, y)
             self.click(y, x)
@@ -231,3 +232,29 @@ class Field:
         for i in range(1, 10):
             s += self.get_count(i)
         return s == 0
+
+    def remove_bad(self, num):
+        for i in range(self.n ** 2):
+            for j in range(self.n ** 2):
+                if (i, j) in self.bad_cells and self.task[i][j] == num:
+                    self.task[i][j] = 0
+                    self.bad_cells.remove((i, j))
+        self.draw()
+        self.click(*self.clicked)
+
+    def input_arrow(self, arrow):
+        if not self.clicked:
+            return
+        x, y = self.clicked
+        if arrow == UP:
+            if y > 0:
+                self.click(x, y-1)
+        elif arrow == DOWN:
+            if y < 8:
+                self.click(x, y + 1)
+        elif arrow == LEFT:
+            if x > 0:
+                self.click(x - 1, y)
+        else:
+            if x < 8:
+                self.click(x + 1, y)

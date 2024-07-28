@@ -1,6 +1,7 @@
 import pygame as pg
 import sys
 from config import *
+import os
 
 
 def exit_game():
@@ -49,6 +50,8 @@ def wait_press_sudoku(mini_buttons):
                 return EMPTY, 0, 0
         elif event.type == pg.KEYDOWN and event.key in K_NUMS:
             return NUM, K_NUMS.index(event.key) + 1
+        elif event.type == pg.KEYDOWN and event.key in K_ARROWS:
+            return ARROW, event.key
     return None, 0, 0
 
 
@@ -71,3 +74,22 @@ def get_level_text(level):
         return "Сложный"
     if level == EXTREME:
         return "Экстремальный"
+
+
+def get_level_color(level):
+    if level == EASY:
+        return GREEN
+    if level == NORMAL:
+        return YELLOW
+    if level == HARD:
+        return RED
+    return PURPLE
+
+
+def load_image(name):
+    fullname = os.path.join('data', name)
+    if not os.path.isfile(fullname):
+        sys.exit()
+    image = pg.image.load(fullname)
+    image = image.convert_alpha()
+    return image
