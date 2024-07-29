@@ -46,6 +46,8 @@ EXIT = 1100
 BTN = 1200
 ARROW = 1300
 MENU = 1400
+CONTINUE = 1500
+START = 1600
 
 UP = pg.K_UP
 DOWN = pg.K_DOWN
@@ -54,3 +56,4 @@ RIGHT = pg.K_RIGHT
 
 K_NUMS = (pg.K_1, pg.K_2, pg.K_3, pg.K_4, pg.K_5, pg.K_6, pg.K_7, pg.K_8, pg.K_9)
 K_ARROWS = (UP, DOWN, RIGHT, LEFT)
+SPACE = pg.K_SPACE

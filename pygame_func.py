@@ -22,6 +22,12 @@ def check_exit():
         pg.event.post(event)
 
 
+def gaussian_blur(surface, radius):
+    scaled_surface = pg.transform.smoothscale(surface, (surface.get_width() // radius, surface.get_height() // radius))
+    scaled_surface = pg.transform.smoothscale(scaled_surface, (surface.get_width(), surface.get_height()))
+    return scaled_surface
+
+
 def update():
     pg.display.update()
     check_exit()
@@ -31,6 +37,20 @@ def wait_press_buttons(button_arr):
     for event in pg.event.get():
         if event.type == pg.MOUSEBUTTONDOWN:
             for button in button_arr:
+                x, y = pg.mouse.get_pos()
+                if button.is_clicked(x, y):
+                    return button
+    return None
+
+
+def wait_press_buttons_keyboard(buttons, keys):
+    for event in pg.event.get():
+        if event.type == pg.KEYDOWN:
+            for k in keys:
+                if event.key == k:
+                    return k
+        elif event.type == pg.MOUSEBUTTONDOWN:
+            for button in buttons:
                 x, y = pg.mouse.get_pos()
                 if button.is_clicked(x, y):
                     return button
@@ -52,6 +72,8 @@ def wait_press_sudoku(mini_buttons):
             return NUM, K_NUMS.index(event.key) + 1
         elif event.type == pg.KEYDOWN and event.key in K_ARROWS:
             return ARROW, event.key
+        elif event.type == pg.KEYDOWN and event.key == SPACE:
+            return SPACE, None
     return None, 0, 0
 
 
@@ -63,6 +85,19 @@ def get_text_rect(name, text, size, color):
     f = get_font(name, size)
     t = f.render(text, True, color)
     return t, t.get_rect()
+
+
+def get_record_filename(level):
+    filename = None
+    if level == EASY:
+        filename = "data/record_easy.txt"
+    elif level == NORMAL:
+        filename = "data/record_normal.txt"
+    elif level == HARD:
+        filename = "data/record_hard.txt"
+    else:
+        filename = "data/record_extreme.txt"
+    return filename
 
 
 def get_level_text(level):

@@ -18,11 +18,13 @@ class Sudoku:
         self.start_time = None
         self.mistakes = None
         self.time = None
+        self.is_record = None
 
     def start_init(self):
         self.time = None
         self.mistakes = 0
         self.state = EASY
+        self.is_record = None
 
     def start(self):
         # self.draw_end_window()
@@ -42,19 +44,14 @@ class Sudoku:
         self.screen.fill(BG_COLOR, (rect.x, rect.y, rect.width, rect.height))
         self.screen.blit(text, rect)
 
-    def run(self):
-        self.start_time = time.time()
+    def draw_run_window(self, field):
         self.reset_bg()
         self.draw_title()
         self.draw_level()
         self.draw_timer()
         self.draw_mistakes()
-        field = Field(self.screen, self.state)
-        field.generate()
-        # for i in field.table:
-        #     print(i)
-        field.draw()
 
+        field.draw()
         buttons = {}
         x = LEFT_MARGIN + MARGIN_MINI_BTN_SIZE
         y = TOP_MARGIN + FIELD_HEIGHT + 10
@@ -68,6 +65,14 @@ class Sudoku:
                 buttons.update({n: btn})
         for btn in buttons.values():
             btn.draw(self.screen)
+        return buttons
+
+    def run(self):
+        self.start_time = time.time()
+
+        field = Field(self.screen, self.state)
+        field.generate()
+        buttons = self.draw_run_window(field)
 
         while True:
             pg_help.update()
@@ -97,11 +102,54 @@ class Sudoku:
             elif typ == ARROW:
                 arrow = args[0]
                 field.input_arrow(arrow)
+            elif typ == SPACE:
+                status = self.draw_pause_window()
+                if status == MENU:
+                    return self.start()
+                if status == SETTINGS:
+                    self.draw_settings()
+                buttons = self.draw_run_window(field)
             if field.is_over():
                 break
             self.draw_mistakes()
             self.draw_timer()
         self.draw_end_window()
+
+    def draw_pause_window(self):
+        pause = pg_help.gaussian_blur(self.screen, 50)
+        self.screen.blit(pause, (0, 0))
+
+        # self.reset_bg()
+        self.draw_title()
+        self.draw_timer()
+        t0 = time.time()
+        font = pg_help.get_font("calibri", 30)
+        button_continue = Button(int(WIDTH / 2) - 140,
+                                 int(HEIGHT / 3) + 70,
+                                 280, 50, "Продолжить",
+                                 BUTTON_COLOR, WHITE, font, CONTINUE)
+        button_menu = Button(int(WIDTH / 2) - 140,
+                             int(HEIGHT / 3) + 130,
+                             280, 50, "Меню",
+                             BUTTON_COLOR, WHITE, font, MENU)
+        button_settings = Button(int(WIDTH / 2) - 140,
+                                 int(HEIGHT / 3) + 190,
+                                 280, 50, "Настройки",
+                                 BUTTON_COLOR, WHITE, font, SETTINGS)
+        buttons = [button_continue, button_menu, button_settings]
+        key_arr = [SPACE]
+        for btn in buttons:
+            btn.draw(self.screen)
+
+        while True:
+            response = pg_help.wait_press_buttons_keyboard(buttons, key_arr)
+            if response is not None:
+                diff = time.time() - t0
+                self.start_time += diff
+                if isinstance(response, Button):
+                    return response.id
+                return response
+            pg_help.update()
 
     def draw_mistakes(self):
         text, rect = pg_help.get_text_rect("timesnewroman", f"Ошибки: {self.mistakes}",
@@ -154,30 +202,32 @@ class Sudoku:
             self.screen.blit(text, rect)
         return buttons
 
-    def new_record(self):
+    def rewrite_record(self):
         t = time.time() - self.start_time
         t = int(t)
-        filename = None
-        if self.state == EASY:
-            filename = "data/record_easy.txt"
-        elif self.state == NORMAL:
-            filename = "data/record_normal.txt"
-        elif self.state == HARD:
-            filename = "data/record_hard.txt"
-        else:
-            filename = "data/record_extreme.txt"
+        filename = pg_help.get_record_filename(self.state)
+        with open(filename, 'w') as f:
+            f.write(str(t))
+
+    def new_record(self):
+        if self.is_record is not None:
+            return self.is_record
+        t = time.time() - self.start_time
+        t = int(t)
+        filename = pg_help.get_record_filename(self.state)
         if not os.path.exists(filename):
             with open(filename, 'w') as f:
                 f.write(str(10 ** 9))
         with open(filename) as f:
             record = float(f.read())
         if t < record:
-            with open(filename, "w") as f:
-                f.write(str(t))
+            self.is_record = True
             return True
+        self.is_record = False
         return False
 
     def draw_end_window(self):
+
         buttons_arr = self.render_end_window()
 
         btn = pg_help.wait_press_buttons(buttons_arr)
@@ -188,6 +238,7 @@ class Sudoku:
 
         record = self.new_record()
         if record:
+            self.rewrite_record()
             all_sprites = pg.sprite.Group()
             last_zv = 0
             count_zv = 0
