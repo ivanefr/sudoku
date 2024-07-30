@@ -1,7 +1,8 @@
-import pygame as pg
+import time
 import sys
 from config import *
 import os
+import pygame as pg
 
 
 def exit_game():
@@ -66,6 +67,8 @@ def wait_press_sudoku(mini_buttons):
             else:
                 for btn in mini_buttons:
                     if btn.is_clicked(x, y):
+                        if btn.id == PAUSE:
+                            return PAUSE, None
                         return BTN, btn.id
                 return EMPTY, 0, 0
         elif event.type == pg.KEYDOWN and event.key in K_NUMS:
@@ -87,17 +90,16 @@ def get_text_rect(name, text, size, color):
     return t, t.get_rect()
 
 
-def get_record_filename(level):
-    filename = None
-    if level == EASY:
-        filename = "data/record_easy.txt"
-    elif level == NORMAL:
-        filename = "data/record_normal.txt"
-    elif level == HARD:
-        filename = "data/record_hard.txt"
-    else:
-        filename = "data/record_extreme.txt"
-    return filename
+def reset_bg(screen):
+    screen.fill(BG_COLOR)
+
+
+def draw_title(screen):
+    text, rect = get_text_rect("gillsansultra", "Sudoku",
+                               50, FONT_COLOR)
+    rect.centerx = WIDTH / 2
+    rect.y = 0
+    screen.blit(text, rect)
 
 
 def get_level_text(level):
@@ -128,3 +130,10 @@ def load_image(name):
     image = pg.image.load(fullname)
     image = image.convert_alpha()
     return image
+
+
+def get_string_time(t):
+    mil = int(t % 1 * 100)
+    mil = str(mil).zfill(2)
+    t = time.strftime(f"%H:%M:%S.{mil}", time.gmtime(t))
+    return t

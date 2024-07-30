@@ -1,12 +1,12 @@
 import random
 import time
-import pygame as pg
 import pygame_func as pg_help
 from config import *
-from button import Button, MiniButton
+from button import Button, MiniButton, ButtonImage
 from field import Field
 from firework import create_particles
-import os
+import pygame as pg
+import statistic
 
 
 class Sudoku:
@@ -32,11 +32,9 @@ class Sudoku:
         self.draw_start_window()
         self.run()
 
-    def reset_bg(self):
-        self.screen.fill(BG_COLOR)
-
     def draw_timer(self):
-        t = self.get_timer()
+        self.time = self.get_time()
+        t = pg_help.get_string_time(self.time)
         text, rect = pg_help.get_text_rect("timesnewroman", t, 30, FONT_COLOR)
         rect.x = WIDTH - rect.width - 3
         rect.y = 0
@@ -45,8 +43,8 @@ class Sudoku:
         self.screen.blit(text, rect)
 
     def draw_run_window(self, field):
-        self.reset_bg()
-        self.draw_title()
+        pg_help.reset_bg(self.screen)
+        pg_help.draw_title(self.screen)
         self.draw_level()
         self.draw_timer()
         self.draw_mistakes()
@@ -63,6 +61,8 @@ class Sudoku:
                 btn = MiniButton(x + (n - 1) * CEIL_SIZE, y, MINI_BTN_WIDTH, MINI_BTN_HEIGHT, str(n),
                                  str(field.get_count(n)), FIELD_BG_COLOR, GOOD_FONT_COLOR, WHITE, font1, font2, n)
                 buttons.update({n: btn})
+        button_pause = ButtonImage(5, 5, 70, 70, "pause.png", BUTTON_COLOR, PAUSE)
+        buttons[PAUSE] = button_pause
         for btn in buttons.values():
             btn.draw(self.screen)
         return buttons
@@ -102,25 +102,27 @@ class Sudoku:
             elif typ == ARROW:
                 arrow = args[0]
                 field.input_arrow(arrow)
-            elif typ == SPACE:
+            elif typ in (SPACE, PAUSE):
                 status = self.draw_pause_window()
                 if status == MENU:
                     return self.start()
                 if status == SETTINGS:
                     self.draw_settings()
                 buttons = self.draw_run_window(field)
-            if field.is_over():
-                break
+                if field.clicked:
+                    field.click(*field.clicked)
             self.draw_mistakes()
             self.draw_timer()
+            if field.is_over():
+                break
+        self.time = self.get_time()
         self.draw_end_window()
 
     def draw_pause_window(self):
         pause = pg_help.gaussian_blur(self.screen, 50)
         self.screen.blit(pause, (0, 0))
 
-        # self.reset_bg()
-        self.draw_title()
+        pg_help.draw_title(self.screen)
         self.draw_timer()
         t0 = time.time()
         font = pg_help.get_font("calibri", 30)
@@ -136,7 +138,8 @@ class Sudoku:
                                  int(HEIGHT / 3) + 190,
                                  280, 50, "Настройки",
                                  BUTTON_COLOR, WHITE, font, SETTINGS)
-        buttons = [button_continue, button_menu, button_settings]
+        button_pause = ButtonImage(5, 5, 70, 70, "pause.png", BUTTON_COLOR, PAUSE)
+        buttons = [button_continue, button_menu, button_settings, button_pause]
         key_arr = [SPACE]
         for btn in buttons:
             btn.draw(self.screen)
@@ -160,8 +163,8 @@ class Sudoku:
         self.screen.blit(text, rect)
 
     def render_end_window(self):
-        self.reset_bg()
-        self.draw_title()
+        pg_help.reset_bg(self.screen)
+        pg_help.draw_title(self.screen)
 
         text = f"Вы прошли уровень сложности"
         text, rect = pg_help.get_text_rect("timesnewroman", text, 40, FONT_COLOR)
@@ -175,9 +178,8 @@ class Sudoku:
         rect.centerx = WIDTH / 2
         rect.y = 250
         self.screen.blit(text, rect)
-        if self.time is None:
-            self.time = self.get_timer()
-        text, rect = pg_help.get_text_rect("timesnewroman", f"Ваше время: {self.time}",
+        text, rect = pg_help.get_text_rect("timesnewroman",
+                                           f"Ваше время: {pg_help.get_string_time(self.time)}",
                                            35, FONT_COLOR)
         rect.centerx = WIDTH / 2
         rect.y = 350
@@ -203,40 +205,35 @@ class Sudoku:
         return buttons
 
     def rewrite_record(self):
-        t = time.time() - self.start_time
-        t = int(t)
-        filename = pg_help.get_record_filename(self.state)
+        filename = statistic.get_record_filename(self.state)
         with open(filename, 'w') as f:
-            f.write(str(t))
+            f.write(str(self.time))
 
     def new_record(self):
         if self.is_record is not None:
             return self.is_record
-        t = time.time() - self.start_time
-        t = int(t)
-        filename = pg_help.get_record_filename(self.state)
-        if not os.path.exists(filename):
-            with open(filename, 'w') as f:
-                f.write(str(10 ** 9))
-        with open(filename) as f:
-            record = float(f.read())
-        if t < record:
+        t = self.time
+        record = statistic.get_level_record(self.state)
+        if record is None or t < record:
             self.is_record = True
             return True
         self.is_record = False
         return False
 
-    def draw_end_window(self):
+    def update_statistics(self):
+        statistic.update(self.state, self.get_time())
 
+    def draw_end_window(self):
         buttons_arr = self.render_end_window()
 
-        btn = pg_help.wait_press_buttons(buttons_arr)
-
+        btn = None
         all_sprites = None
         last_zv = None
         count_zv = None
 
         record = self.new_record()
+        self.update_statistics()
+
         if record:
             self.rewrite_record()
             all_sprites = pg.sprite.Group()
@@ -245,7 +242,6 @@ class Sudoku:
         while btn is None:
             if record:
                 if time.time() - last_zv > 0.25 and count_zv < 10:
-                    from firework import create_particles
                     create_particles((random.randint(100, WIDTH - 100),
                                       random.randint(100, HEIGHT - 100)),
                                      all_sprites, WIDTH, HEIGHT)
@@ -261,9 +257,9 @@ class Sudoku:
         elif btn.id == EXIT:
             pg_help.exit_game()
 
-    def get_timer(self):
-        t = int(time.time() - self.start_time)
-        t = time.strftime("%H:%M:%S", time.gmtime(t))
+    def get_time(self):
+        t = time.time() - self.start_time
+        t = round(t, 2)
         return t
 
     def draw_level(self):
@@ -277,8 +273,8 @@ class Sudoku:
         self.screen.blit(text, rect)
 
     def draw_play_window(self):
-        self.reset_bg()
-        self.draw_title()
+        pg_help.reset_bg(self.screen)
+        pg_help.draw_title(self.screen)
 
         font = pg_help.get_font("calibri", 30)
         button_lvl_1 = Button(int(WIDTH / 2) - 140,
@@ -308,8 +304,8 @@ class Sudoku:
                 return
 
     def draw_start_window(self):
-        self.reset_bg()
-        self.draw_title()
+        pg_help.reset_bg(self.screen)
+        pg_help.draw_title(self.screen)
         font = pg_help.get_font("calibri", 30)
         button_play = Button(int(WIDTH / 2) - 140,
                              int(HEIGHT / 3),
@@ -338,22 +334,16 @@ class Sudoku:
                 if btn.id == EXIT:
                     pg_help.exit_game()
                 if btn.id == STATISTIC:
-                    self.draw_statistic()
+                    self.draw_statistic_window()
+                    return self.draw_start_window()
                 if btn.id == PLAY:
                     self.draw_play_window()
                 if btn.id == SETTINGS:
                     self.draw_settings()
                 return
 
-    def draw_statistic(self):
-        self.draw_start_window()
+    def draw_statistic_window(self):
+        statistic.draw(self.screen)
 
     def draw_settings(self):
         self.draw_start_window()
-
-    def draw_title(self):
-        text, rect = pg_help.get_text_rect("gillsansultra", "Sudoku",
-                                           50, FONT_COLOR)
-        rect.centerx = WIDTH / 2
-        rect.y = 0
-        self.screen.blit(text, rect)

@@ -1,4 +1,5 @@
 import pygame
+import pygame_func as pg_help
 
 
 class Button:
@@ -63,3 +64,20 @@ class MiniButton(Button):
 
         screen.blit(text1, rect1)
         screen.blit(text2, rect2)
+
+
+class ButtonImage(Button):
+    def __init__(self, x, y, width, height, filename, color_button, _id, line=False):
+        super().__init__(x, y, width, height, None, color_button, None, None, _id)
+        setting_image = pg_help.load_image(filename)
+        self.image = pygame.transform.scale(setting_image, self.size)
+        self.line = line
+
+    def draw(self, screen):
+        if self.line:
+            pygame.draw.rect(screen,
+                             self.color_button,
+                             (self.x, self.y, *self.size), 1)
+        rect = self.image.get_rect()
+        rect.center = (int(self.x + self.width / 2), int(self.y + self.height / 2))
+        screen.blit(self.image, rect)
