@@ -134,12 +134,8 @@ class Sudoku:
                              int(HEIGHT / 3) + 130,
                              280, 50, "Меню",
                              BUTTON_COLOR, WHITE, font, MENU)
-        button_settings = Button(int(WIDTH / 2) - 140,
-                                 int(HEIGHT / 3) + 190,
-                                 280, 50, "Настройки",
-                                 BUTTON_COLOR, WHITE, font, SETTINGS)
         button_pause = ButtonImage(5, 5, 70, 70, "pause.png", BUTTON_COLOR, PAUSE)
-        buttons = [button_continue, button_menu, button_settings, button_pause]
+        buttons = [button_continue, button_menu, button_pause]
         key_arr = [SPACE]
         for btn in buttons:
             btn.draw(self.screen)
@@ -315,15 +311,11 @@ class Sudoku:
                                   int(HEIGHT / 3) + 60,
                                   280, 50, "Статистика",
                                   BUTTON_COLOR, WHITE, font, STATISTIC)
-        button_settings = Button(int(WIDTH / 2) - 140,
-                                 int(HEIGHT / 3) + 120,
-                                 280, 50, "Настройки",
-                                 BUTTON_COLOR, WHITE, font, SETTINGS)
         button_exit = Button(int(WIDTH / 2) - 140,
-                             int(HEIGHT / 3) + 180,
+                             int(HEIGHT / 3) + 120,
                              280, 50, "Выход",
                              BUTTON_COLOR, WHITE, font, EXIT)
-        buttons = [button_play, button_statistic, button_exit, button_settings]
+        buttons = [button_play, button_statistic, button_exit]
         for button in buttons:
             button.draw(self.screen)
 
