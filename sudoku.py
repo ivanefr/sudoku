@@ -106,8 +106,6 @@ class Sudoku:
                 status = self.draw_pause_window()
                 if status == MENU:
                     return self.start()
-                if status == SETTINGS:
-                    self.draw_settings()
                 buttons = self.draw_run_window(field)
                 if field.clicked:
                     field.click(*field.clicked)
@@ -330,12 +328,8 @@ class Sudoku:
                     return self.draw_start_window()
                 if btn.id == PLAY:
                     self.draw_play_window()
-                if btn.id == SETTINGS:
-                    self.draw_settings()
                 return
 
     def draw_statistic_window(self):
         statistic.draw(self.screen)
 
-    def draw_settings(self):
-        self.draw_start_window()
